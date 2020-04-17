@@ -43,11 +43,11 @@ BLADE_EXEC_OS_BRANCH=master
 
 # chaosblade-exec-docker
 BLADE_EXEC_DOCKER_PROJECT=https://github.com/chaosblade-io/chaosblade-exec-docker.git
-BLADE_EXEC_DOCKER_BRANCH=master
+BLADE_EXEC_DOCKER_BRANCH=bugfix-chaosblade-334
 
 # chaosblade-exec-kubernetes
 BLADE_OPERATOR_PROJECT=https://github.com/chaosblade-io/chaosblade-operator.git
-BLADE_OPERATOR_BRANCH=master
+BLADE_OPERATOR_BRANCH=bugfix-chaosblade-334
 
 # chaosblade-exec-jvm
 BLADE_EXEC_JVM_PROJECT=https://github.com/chaosblade-io/chaosblade-exec-jvm.git

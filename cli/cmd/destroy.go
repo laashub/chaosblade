@@ -24,6 +24,7 @@ import (
 
 	"github.com/chaosblade-io/chaosblade-spec-go/channel"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -44,6 +45,8 @@ func (dc *DestroyCommand) Init() {
 			return dc.runDestroy(cmd, args)
 		},
 	}
+	flags := dc.command.PersistentFlags()
+	flags.StringVar(&uid, UidFlag, "", "Set Uid for the experiment, adapt to docker")
 	dc.baseExpCommandService = newBaseExpCommandService(dc)
 }
 
@@ -128,7 +131,7 @@ func (dc *DestroyCommand) bindFlagsFunction() func(commandFlags map[string]func(
 	}
 }
 
-func (dc *DestroyCommand) actionRunEFunc(target, scope string, actionCommand *actionCommand, actionCommandSpec spec.ExpActionCommandSpec) func(cmd *cobra.Command, args []string) error {
+func (dc *DestroyCommand) actionRunEFunc(target, scope string, _ *actionCommand, actionCommandSpec spec.ExpActionCommandSpec) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		expModel := createExpModel(target, scope, actionCommandSpec.Name(), cmd)
 		// execute experiment
@@ -141,7 +144,28 @@ func (dc *DestroyCommand) actionRunEFunc(target, scope string, actionCommand *ac
 		if !response.Success {
 			return response
 		}
-		cmd.Println(response.Print())
+		// update status by uid
+		if uid := expModel.ActionFlags["uid"]; uid != "" {
+			checkError(GetDS().UpdateExperimentModelByUid(uid, Destroyed, ""))
+		} else {
+			command := expModel.Target
+			subCommand := expModel.ActionName
+			if expModel.Scope != "" && expModel.Scope != "host" {
+				command = expModel.Scope
+				subCommand = fmt.Sprintf("%s %s", expModel.Target, expModel.ActionName)
+			}
+			// update status by finding related records
+			logrus.Infof("destroy by model: %+v, command: %s, subCommand: %s", expModel, command, subCommand)
+			experimentModels, err := GetDS().QueryExperimentModelsByCommand(command, subCommand, expModel.ActionFlags)
+			if err != nil {
+				logrus.Warningf("destroy success but query records failed, %v", err)
+			} else {
+				for _, record := range experimentModels {
+					checkError(GetDS().UpdateExperimentModelByUid(record.Uid, Destroyed, ""))
+				}
+			}
+		}
+		cmd.Println(spec.ReturnSuccess(expModel).Print())
 		return nil
 	}
 }
